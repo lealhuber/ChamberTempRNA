@@ -1,0 +1,6 @@
+# Ignore these directories:
+analysis/results/
+analysis/intermediate/
+
+# Ignore temporary files:
+*.tmp
