@@ -1,6 +1,8 @@
 # Ignore these directories:
 analysis/results/
 analysis/intermediate/
+data/
 
-# Ignore temporary files:
+# Ignore temporary files and zipped files:
 *.tmp
+*.gz
