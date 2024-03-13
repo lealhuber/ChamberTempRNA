@@ -2,6 +2,7 @@
 analysis/results/
 analysis/intermediate/
 data/
+trash/
 
 # Ignore temporary files and zipped files:
 *.tmp
