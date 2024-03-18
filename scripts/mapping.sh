@@ -5,18 +5,18 @@
 #SBATCH --time=12:00:00
 
 # run in analysis/testsamples/mapping and have a symlink to data there? But then there's a path in f...
-# create file with base-filenames without read1 or read2 called filebase
+# create file with base-filenames without read1 or read2 called filebase and run in same directory
 # adjust for paired-end data!!! Test this on 2 samples first or so
 
 ## go through each file seperately for mapping
 # define path to data directory
-dat_dir=/faststorage/project/ostrich_thermal/people/leah/ChamberTempRNA/data/illumina_test
+dat_dir=/faststorage/project/ostrich_thermal/people/leah/ChamberTempRNA/data/illumina_test/trimmed
 while read filebase
 do
-    echo filebase
+    echo $filebase
     # assemble and define filenames
-    fq_read1=$dat_dir/${filebase}_read1.fastq.gz
-    fq_read2=$dat_dir/${filebase}_read2.fastq.gz
+    fq_read1=$dat_dir/${filebase}_R1.fq.gz
+    fq_read2=$dat_dir/${filebase}_R2.fq.gz
     # map with STAR with an output BAM 
     STAR --runThreadN 10 --genomeDir /faststorage/project/ostrich_thermal/people/leah/ChamberTempRNA/data/reference/reference_indexed \
         --readFilesIn $fq_read1 $fq_read2 --readFilesCommand zcat --outSAMtype BAM SortedByCoordinate \
@@ -30,7 +30,7 @@ do
     htseq-count --stranded=no $filebase.Aligned.sortedByCoord.q1.out.bam \
         /faststorage/project/ostrich_thermal/people/leah/ChamberTempRNA/data/reference/Struthio_camelus_australis.ASM69896v1.106.gtf \
         > $filebase.count_matrix.txt ;
-done
+done < filebase
 
 # make R style file with filenames for DESeqDataSetFromHTSeqCount function
 ls *count_matrix.txt | sed 's/.*/"&",/' > matrixFileNames.txt
