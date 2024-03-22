@@ -20,9 +20,8 @@ library("org.Gg.eg.db")
 # make sample data for small sample set, I think a data.frame?
 #sampledata <- data.frame(ID = c("B2002","B2009","B2019","B2038"), condition = c("thermoneutral","heat","heat","thermoneutral"))
 
-IDcond = read.table("SampleNames.txt", col.names = c("ID","temperature","solution"))
-IDcond$rep = sub("B...._(rep.)","\\1" ,IDcond$ID, perl = TRUE)
-countmatrixnames = read.table("matrixFileNames.txt", col.names = c("filename","nix"))
+IDcond = read.table("SampleNames.txt", col.names = c("ID"))
+countmatrixnames = read.table("matrixFileNamesCopy.txt", col.names = c("filename"))
 
 ## construct count matrix using DESeq2
 # sample table for DESeqDataSet (dds) function
