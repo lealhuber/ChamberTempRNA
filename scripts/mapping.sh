@@ -11,6 +11,7 @@
 ## go through each file seperately for mapping
 # define path to data directory
 dat_dir=/faststorage/project/ostrich_thermal/people/leah/ChamberTempRNA/data/illumina_test/trimmed
+
 while read filebase
 do
     echo $filebase
