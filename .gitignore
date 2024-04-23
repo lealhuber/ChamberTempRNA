@@ -1,7 +1,5 @@
 # Ignore these directories:
-analysis/results/
-analysis/intermediate/
-analysis/testsamples/
+analysis/
 data/
 trash/
 
