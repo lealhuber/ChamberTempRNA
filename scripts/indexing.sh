@@ -5,11 +5,11 @@
 #SBATCH --time=02:00:00
 
 # indexing reference and annotation
-genome=/faststorage/project/ostrich_thermal/BACKUP/ostrich_reference/Struthio_camelus.20130116.OM.fa
+genome=/faststorage/project/ostrich_thermal/BACKUP/ostrich_reference/Struthio_camelus_HiC/Struthio_camelus_HiC.fasta
 
-STAR --runThreadN 8 --runMode genomeGenerate --genomeDir /faststorage/project/ostrich_thermal/people/leah/ChamberTempRNA/data/reference/reference_indexed \
+STAR --runThreadN 8 --runMode genomeGenerate --genomeDir /faststorage/project/ostrich_thermal/BACKUP/ostrich_reference/Struthio_camelus_HiC/HiC_indexed \
     --genomeFastaFiles $genome \
-    --sjdbGTFfile /faststorage/project/ostrich_thermal/people/leah/ChamberTempRNA/data/reference/Struthio_camelus_australis.ASM69896v1.106.gtf \
+    --sjdbGTFfile /faststorage/project/ostrich_thermal/BACKUP/ostrich_reference/Struthio_camelus_HiC/Struthio_camelus_HiC_augustus.gtf \
     --sjdbOverhang 149
 
 exit 0
