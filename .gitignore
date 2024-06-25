@@ -2,6 +2,7 @@
 analysis_test/
 data/
 trash/
+steps/
 
 # Ignore temporary files and zipped files:
 *.tmp
