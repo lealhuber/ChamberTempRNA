@@ -34,7 +34,7 @@ for filename in $dat_dir/*_R1.trimmed.fq.gz; do
         --outFileNamePrefix $filebase.
     # makes files sample#.Aligned.sortedByCoord.out.bam
     echo "Star done"
-    # Grab all alignments except ones that map to more than 4 locations:
+    # Grab all alignments except ones that map to more than 4 locations (-b -> output BAM, -q 1 -> maps one to four times (I doublechecked this with STAR manual)):
     samtools view -b -q 1 $filebase.Aligned.sortedByCoord.out.bam > $filebase.Aligned.sortedByCoord.q1.out.bam
     # index because htseq is complaining
     samtools index -@ 10 $filebase.Aligned.sortedByCoord.q1.out.bam # generates BAI-format index Aligned.sortedByCoord.q1.out.bam.bai

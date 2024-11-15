@@ -6,12 +6,12 @@
 
 # run in mapping
 # QC of mapped samples
-for filename in L5*.out.bam; do
-    # summarising mapping statistics
-    bam_stat.py -i $filename > ../QC/rseqc/${filename}_stats.txt # perhaps also need to specify -q 255 because in star that is the minimum mapq for uniquely mapping read
-
-    # Calculate the distribution of mismatches across reads.
-    mismatch_profile.py -i $filename -l 150 -o ../QC/rseqc/${filename}
+for filename in L*.sortedByCoord.out.bam; do
+    # samtools stats stuff
+    filebase=${filename%.Aligned*}
+    plot-bamstats -p plots/${filebase}/ $filebase.Aligned.sortedByCoord.out.bam.stats
+    # Calculate the distribution of mismatches across reads. Doesn't work because my BAM files do not have an MD tag :(
+    # mismatch_profile.py -i $filename -l 150 -o ../QC/rseqc/${filename}
 
     # Calculate the distributions of inserted nucleotides across reads
     insertion_profile.py -i $filename -o .../QC/rseqc/${filename} -s "PE"

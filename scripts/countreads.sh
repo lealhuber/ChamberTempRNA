@@ -1,14 +1,50 @@
 #!/bin/bash
 #SBATCH --account=ostrich_thermal
-#SBATCH --cpus-per-task=1
+#SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
-#SBATCH --time=24:00:00
+#SBATCH --time=72:00:00
 
 #run in steps/mapping
 
-for filename in *q1.out.bam; do
-    #Count the reads
-    htseq-count --stranded=no $filename \
+for filename in L7[6-9].Aligned.sortedByCoord.out.bam; do
+    ## index (if not already done)
+    if ! test -f ${filename}.bai; then
+        samtools index -@ 4 $filename
+    fi
+    ## Count the reads
+    # default mode is union and noneunique mode none
+    # format bam, stranded no, ordered by position (not by name)
+    htseq-count -f bam -s no -r pos $filename \
+        /faststorage/project/ostrich_thermal/BACKUP/ostrich_reference/Struthio_camelus_HiC/Struthio_camelus_HiC_augustus.gff \
+        > $filename.count_matrix.txt
+    echo $filename
+    echo "htseq-count done"
+done
+
+for filename in L7.Aligned.sortedByCoord.out.bam; do
+    ## index (if not already done)
+    if ! test -f ${filename}.bai; then
+        samtools index -@ 4 $filename
+    fi
+    ## Count the reads
+    # default mode is union and noneunique mode none
+    # format bam, stranded no, ordered by position (not by name)
+    htseq-count -f bam -s no -r pos $filename \
+        /faststorage/project/ostrich_thermal/BACKUP/ostrich_reference/Struthio_camelus_HiC/Struthio_camelus_HiC_augustus.gff \
+        > $filename.count_matrix.txt
+    echo $filename
+    echo "htseq-count done"
+done
+
+for filename in L[8-9]*.Aligned.sortedByCoord.out.bam; do
+    ## index (if not already done)
+    if ! test -f ${filename}.bai; then
+        samtools index -@ 4 $filename
+    fi
+    ## Count the reads
+    # default mode is union and noneunique mode none
+    # format bam, stranded no, ordered by position (not by name)
+    htseq-count -f bam -s no -r pos $filename \
         /faststorage/project/ostrich_thermal/BACKUP/ostrich_reference/Struthio_camelus_HiC/Struthio_camelus_HiC_augustus.gff \
         > $filename.count_matrix.txt
     echo $filename
