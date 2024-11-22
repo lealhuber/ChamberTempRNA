@@ -1,0 +1,1 @@
+../steps/gwf_trim_map/workflow.py
