@@ -72,27 +72,48 @@ for FASTQ_PAIR in fastq_pairs:
         walltime='72:00:00',
         inputs= {'FASTQ_TRIM': [f'{out_dir}/trimmed/{FASTQ_PAIR}_val_1.fq.gz',
                                 f'{out_dir}/trimmed/{FASTQ_PAIR}_val_2.fq.gz']},
-        outputs=[f'{out_dir}/mapped/{FASTQ_PAIR}.Aligned.sortedByCoord.q1.out.bam',
-                 f'{out_dir}/mapped/{FASTQ_PAIR}.Aligned.sortedByCoord.q1.out.bam.bai',
-                 f'{out_dir}/mapped/{FASTQ_PAIR}.Aligned.sortedByCoord.q1.out.bam.stats'],
-        protect=[f'{out_dir}/mapped/{FASTQ_PAIR}.Aligned.sortedByCoord.q1.out.bam.stats']) << """
+        outputs=[f'{out_dir}/mapped/{FASTQ_PAIR}.Aligned.sortedByCoord.out.bam']) << """
     mkdir -p {out_dir}/mapped
     STAR --runThreadN 10 --genomeDir /faststorage/project/ostrich_thermal/BACKUP/ostrich_reference/Struthio_camelus_HiC/HiC_indexed \
         --readFilesIn {out_dir}/trimmed/{FASTQ_PAIR}_val_1.fq.gz {out_dir}/trimmed/{FASTQ_PAIR}_val_2.fq.gz \
         --readFilesCommand zcat --outSAMtype BAM SortedByCoordinate --outFileNamePrefix {out_dir}/mapped/{FASTQ_PAIR}.
-    
-    samtools view -b -q 1 {out_dir}/mapped/{FASTQ_PAIR}.Aligned.sortedByCoord.out.bam > {out_dir}/mapped/{FASTQ_PAIR}.Aligned.sortedByCoord.q1.out.bam
-    samtools index -@ 10 {out_dir}/mapped/{FASTQ_PAIR}.Aligned.sortedByCoord.q1.out.bam
-    samtools stats -@ 10 -r /faststorage/project/ostrich_thermal/BACKUP/ostrich_reference/Struthio_camelus_HiC/Struthio_camelus_HiC.fasta \
-        {out_dir}/mapped/{FASTQ_PAIR}.Aligned.sortedByCoord.q1.out.bam > {out_dir}/mapped/{FASTQ_PAIR}.Aligned.sortedByCoord.q1.out.bam.stats
     """.format(FASTQ_PAIR=FASTQ_PAIR, out_dir=out_dir)  # type: ignore
 
 # STAR mapps the reads and outputs a BAM file that's sorted by coordinates (otherwise all standard settings)
+
+
+#############################
+### Removing duplicates
+#############################
+
+for FASTQ_PAIR in fastq_pairs:
+    # print(FASTQ_PAIR)
+    gwf.target( f"Dedup_{FASTQ_PAIR}",
+        cores=4,
+        memory='64G',
+        walltime='72:00:00',
+        inputs= {'BAMs': [f'{out_dir}/mapped/{FASTQ_PAIR}.Aligned.sortedByCoord.out.bam']},
+        outputs=[f'{out_dir}/mapped/{FASTQ_PAIR}.sortedByCoord.dedup.q255.out.bam',
+                 f'{out_dir}/mapped/{FASTQ_PAIR}.sortedByCoord.dedup.q255.out.bam.bai',
+                 f'{out_dir}/mapped/{FASTQ_PAIR}.sortedByCoord.dedup.q255.out.bam.stats'],
+        protect=[f'{out_dir}/mapped/{FASTQ_PAIR}.sortedByCoord.dedup.q255.out.bam.stats']) << """
+    samtools view -b -q 255 {out_dir}/mapped/{FASTQ_PAIR}.Aligned.sortedByCoord.out.bam |
+        samtools sort -n -@ 4 -o {out_dir}/mapped/{FASTQ_PAIR}.sortedByName.bam &&
+    samtools fixmate -r -m -@ 4 {out_dir}/mapped/{FASTQ_PAIR}.sortedByName.bam - |
+        samtools sort -@ 4 -o {out_dir}/mapped/{FASTQ_PAIR}.sortedByCoord.bam &&
+    samtools markdup -r -s --duplicate-count -@ 4 {out_dir}/mapped/{FASTQ_PAIR}.sortedByCoord.bam {out_dir}/mapped/{FASTQ_PAIR}.sortedByCoord.dedup.q255.out.bam
+    samtools index -@ 4 {out_dir}/mapped/{FASTQ_PAIR}.sortedByCoord.dedup.q255.out.bam
+    samtools stats -@ 4 -r /faststorage/project/ostrich_thermal/BACKUP/ostrich_reference/Struthio_camelus_HiC/Struthio_camelus_HiC.fasta \
+        {out_dir}/mapped/{FASTQ_PAIR}.sortedByCoord.dedup.q255.out.bam > {out_dir}/mapped/{FASTQ_PAIR}.sortedByCoord.dedup.q255.out.bam.stats
+    """.format(FASTQ_PAIR=FASTQ_PAIR, out_dir=out_dir)  # type: ignore
+
 # samtools view grabs all except ones that map (I doublechecked this with STAR manual))
 # --> next time grab only reads that mapped to 1 location to increase speed of htseq-count
 # using this (curtesy of ChatGPT): samtools view -h {FASTQ_PAIR}.Aligned.sortedByCoord.out.bam | awk '$1 ~ /^@/ || $5 == 255' | samtools view -b > {FASTQ_PAIR}.uniquely_mapped.bam
 # this prints bam including header, awk grabs all headers (start with @) and reads with MAPQ=255, than converts back to bam
 # or maybe test first whether simply -q 255 works 
+# sorting by name necessary for fixmate
+# fixmate and sorting by coordinate necessary for markdup
 # samtools indexing is needed by htseq
 # samtools stats makes some stats
 
@@ -106,13 +127,13 @@ for FASTQ_PAIR in fastq_pairs:
         cores=1,
         memory='64gb',
         walltime='10:00:00',
-        inputs={'BAMS': [f'{out_dir}/mapped/{FASTQ_PAIR}.Aligned.sortedByCoord.q255.out.bam']},
-        outputs=[f'{out_dir}/counts/{FASTQ_PAIR}.count_matrix.txt'],
-        protect=[f'{out_dir}/counts/{FASTQ_PAIR}.count_matrix.txt']) << """
+        inputs={'BAMS': [f'{out_dir}/mapped/{FASTQ_PAIR}.sortedByCoord.dedup.q255.out.bam']},
+        outputs=[f'{out_dir}/counts/{FASTQ_PAIR}.dedup.count_matrix.txt'],
+        protect=[f'{out_dir}/counts/{FASTQ_PAIR}.dedup.count_matrix.txt']) << """
     mkdir -p {out_dir}/counts
-    htseq-count -f bam -s no -r pos {out_dir}/mapped/{FASTQ_PAIR}.Aligned.sortedByCoord.q1.out.bam \
+    htseq-count -f bam -s no -r pos {out_dir}/mapped/{FASTQ_PAIR}.sortedByCoord.dedup.q255.out.bam \
         /faststorage/project/ostrich_thermal/BACKUP/ostrich_reference/Struthio_camelus_HiC/Struthio_camelus_HiC_augustus.gff \
-        > {out_dir}/counts/{FASTQ_PAIR}.count_matrix.txt
+        > {out_dir}/counts/{FASTQ_PAIR}.dedup.count_matrix.txt
 """.format(FASTQ_PAIR=FASTQ_PAIR, out_dir=out_dir) # type: ignore
 
 # counts genes with default mode union and noneunique mode none
@@ -128,16 +149,16 @@ for FASTQ_PAIR in fastq_pairs:
 
 # Input file is not perfect yet!!!
 
-gwf.target("FileList",
-           cores = 1,
-           memory='1gb',
-           walltime='00:05:00',
-           inputs=[f'{out_dir}/counts/L66.count_matrix.txt'],
-           outputs=[f'{out_dir}/matrixFileNames.txt',
-                    f'{out_dir}/SampleNames.txt',
-                    f'{out_dir}/matrixFileNamesCopy.txt']) << """
-    ls {out_dir}/counts/ | sed 's/.*/"&",/' > {out_dir}/matrixFileNames.txt
-    ls {out_dir}/counts/ | sed 's/\\(L.\\)\\(.Aligned*\\)/"\\1",/' > {out_dir}/SampleNames.txt
-    ls {out_dir}/counts/ > {out_dir}/matrixFileNamesCopy.txt
-""".format(out_dir=out_dir) # type: ignore
+# gwf.target("FileList",
+#            cores = 1,
+#            memory='1gb',
+#            walltime='00:05:00',
+#            inputs=[f'{out_dir}/counts/L66.count_matrix.txt'],
+#            outputs=[f'{out_dir}/matrixFileNames.txt',
+#                     f'{out_dir}/SampleNames.txt',
+#                     f'{out_dir}/matrixFileNamesCopy.txt']) << """
+#     ls {out_dir}/counts/ | sed 's/.*/"&",/' > {out_dir}/matrixFileNames.txt
+#     ls {out_dir}/counts/ | sed 's/\\(L.\\)\\(.Aligned*\\)/"\\1",/' > {out_dir}/SampleNames.txt
+#     ls {out_dir}/counts/ > {out_dir}/matrixFileNamesCopy.txt
+# """.format(out_dir=out_dir) # type: ignore
 
