@@ -3,6 +3,7 @@ analysis_test/
 data/
 trash/
 steps/
+unused_scripts/
 
 # Ignore temporary files and zipped files:
 *.tmp
