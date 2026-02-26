@@ -343,7 +343,7 @@ make_colvec <- function(x){
 colvec <- sapply(cat_effects_noint$gene, function(x) make_colvec(x)) # changed here from cat_effects_all to cat_effects_noint because we're not using linear anymore
 table(colvec)
 cat_effects_noint$colour <- colvec
-# write.csv(cat_effects_noint, file = "cat_effects_noint.csv") # save for Mads
+# write.csv(cat_effects_noint, file = "cat_effects_noint.csv") # save
 
 
 ## up or downregulated
@@ -387,26 +387,39 @@ hist(filter(linear_effects, age == "8w")$slope)
 # higher in 1w a bit
 
 
+### make wide data frame
+# need to run PH_ageefftable script first to get the dfs
+make_colvec2 <- function(x){
+  names(x) <- x
+  if (x %in% c(genes_hvbNoInt,genes_hvb1w,genes_hvb8w) & x %in% c(genes_cvbNoInt,genes_cvb1w,genes_cvb8w)){
+    return("hotandcold")
+  }else if (x %in% c(genes_hvbNoInt,genes_hvb1w,genes_hvb8w)){
+    return("hot")
+  }else if (x %in% c(genes_cvbNoInt,genes_cvb1w,genes_cvb8w)){
+    return("cold")
+  }else{
+    return("wtf")
+  }
+}
+colvecall <- sapply(cat_effects_all$gene, function(x) make_colvec2(x))
+table(colvecall)
+cat_effects_all$colour <- colvecall
 
-### save gene lists for functional analyses
-# ages: genes that are differently or same expressed between ages
-ages_different <- unique(c(filter(cat_eff_wide, (hvb_week1 < 0 & hvb_week8 > 0) | (hvb_week1 > 0 & hvb_week8 < 0))$gene,
-                           filter(cat_eff_wide, (cvb_week1 < 0 & cvb_week8 > 0) | (cvb_week1 > 0 & cvb_week8 < 0))$gene,
-                           filter(lin_eff_wide, (week1 < 0 & week8 > 0) | (week1 > 0 & week8 < 0))$gene))
-ages_different_cat <- unique(c(filter(cat_eff_wide, (hvb_week1 < 0 & hvb_week8 > 0) | (hvb_week1 > 0 & hvb_week8 < 0))$gene,
-                           filter(cat_eff_wide, (cvb_week1 < 0 & cvb_week8 > 0) | (cvb_week1 > 0 & cvb_week8 < 0))$gene))
-ages_same <- unique(c(filter(cat_eff_wide, (hvb_week1 < 0 & hvb_week8 < 0) | (hvb_week1 > 0 & hvb_week8 > 0))$gene,
-                      filter(cat_eff_wide, (cvb_week1 < 0 & cvb_week8 < 0) | (cvb_week1 > 0 & cvb_week8 > 0))$gene,
-                      filter(lin_eff_wide, (week1 < 0 & week8 < 0) | (week1 > 0 & week8 > 0))$gene))
-ages_same_cat <- unique(c(filter(cat_eff_wide, (hvb_week1 < 0 & hvb_week8 < 0) | (hvb_week1 > 0 & hvb_week8 > 0))$gene,
-                      filter(cat_eff_wide, (cvb_week1 < 0 & cvb_week8 < 0) | (cvb_week1 > 0 & cvb_week8 > 0))$gene))
+cat_eff_wide <- pivot_wider(dplyr::select(cat_effects, gene:hvb), names_from = age, values_from = c(cvb,hvb))
+cat_eff_wide[is.na(cat_eff_wide$cvb_week1),"cvb_week1"] <- 0
+cat_eff_wide[is.na(cat_eff_wide$cvb_week8),"cvb_week8"] <- 0
+cat_eff_wide[is.na(cat_eff_wide$hvb_week1),"hvb_week1"] <- 0
+cat_eff_wide[is.na(cat_eff_wide$hvb_week8),"hvb_week8"] <- 0
+# add info where expressed
 
-save(hotup,hotdown,coldup,colddown,hotdowncoldup,hotupcolddown,bothup,bothdown,errgs_2cat2lin, file = "NewPHgenesForGO.RData") # should only be no interaction genes!
+cat_eff_wide <- left_join(cat_eff_wide, subset(cat_effects_all, select = c(gene, colour)))
+
+# save(hotup,hotdown,coldup,colddown,hotdowncoldup,hotupcolddown,bothup,bothdown,errgs_2cat2lin, file = "NewPHgenesForGO.RData") # should only be no interaction genes!
 
 # also make list of genes for Fst analysis
 genes_of_interest_noint <- cat_effects_noint$gene
 table(duplicated(genes_of_interest_noint)) # good no overlaps
-writeLines(genes_of_interest_noint, "../genes_of_interest_noint.txt")
+# writeLines(genes_of_interest_noint, "../genes_of_interest_noint.txt")
 
 #### venn plots -------------------------
 
@@ -415,19 +428,10 @@ gplots::venn(list("hvb" = filter(cat_effects, !is.na(hvb))$gene,
 gplots::venn(list("linear" = linear_effects$gene,
                   "hvb" = filter(cat_effects, !is.na(hvb))$gene,
                   "cvb" = filter(cat_effects, !is.na(cvb))$gene))
-# gplots::venn(list("lin1w" = filter(linear_effects, age == "1w" & !is.na(slope))$gene,
-#                   "lin8w" = filter(linear_effects, age == "8w" & !is.na(slope))$gene,
-#                   "hvb1w" = filter(cat_effects, age == "week1" & !is.na(hvb))$gene,
-#                   "hvb8w" = filter(cat_effects, age == "week8" & !is.na(hvb))$gene))
 gplots::venn(list("cvb1w" = filter(cat_effects, age == "week1" & !is.na(cvb))$gene,
                   "cvb8w" = filter(cat_effects, age == "week8" & !is.na(cvb))$gene,
                   "hvb1w" = filter(cat_effects, age == "week1" & !is.na(hvb))$gene,
                   "hvb8w" = filter(cat_effects, age == "week8" & !is.na(hvb))$gene))
-# from models without interaction: shared and distinct
-# gplots::venn(list("linear" = linear_effects_noint$gene,
-#                   "hvb" = filter(cat_effects_noint, !is.na(hvb))$gene,
-#                   "cvb" = filter(cat_effects_noint, !is.na(cvb))$gene))
-# compare mods with and without interaction
 gplots::venn(list("lin_int" = linear_effects$gene,
                   "lin_noint" = linear_effects_noint$gene,
                   "cat_int" = cat_effects$gene,
@@ -571,19 +575,7 @@ ggplot(cat_eff_noint_long, aes(x = condition, fill = direction))+
 
 
 ### plot with hot dist and shared and cold dist and shared showing behaviour in ages
-# need to run PH_ageefftable script first to get the dfs
-make_colvec2 <- function(x){
-  names(x) <- x
-  if (x %in% c(genes_hvbNoInt,genes_hvb1w,genes_hvb8w) & x %in% c(genes_cvbNoInt,genes_cvb1w,genes_cvb8w)){
-    return("hotandcold")
-  }else if (x %in% c(genes_hvbNoInt,genes_hvb1w,genes_hvb8w)){
-    return("hot")
-  }else if (x %in% c(genes_cvbNoInt,genes_cvb1w,genes_cvb8w)){
-    return("cold")
-  }else{
-    return("wtf")
-  }
-}
+# run PH_ageefftable first
 colvec2 <- sapply(cat_eff2$gene, function(x) make_colvec2(x))
 table(colvec2) # idk could be right I guess?
 cat_eff2$colour <- colvec2
@@ -688,63 +680,13 @@ ggplot(filter(cat_eff2, condition == "hvb" & ageeff != "same_slope"), aes (x = a
 
 
 
-### plot of all genes for paper
-# what happens when we're a bit stricter about linearity?
-fitfull_gr <- glmmQvals(fitfull_gr, cutoff = 0.001)
-fit_lin_noint <- glmmQvals(fit_lin_noint, cutoff = 0.005)
-statsct_agesig005 <- as.data.frame(statsct_agesig[1:219,])
-statsct_agesig001 <- as.data.frame(statsct_agesig[1:205,])
-statslin_noint_sig005 <- as.data.frame(statslin_noint_sig[1:257,])
-statslin_noint_sig001 <- as.data.frame(statslin_noint_sig[1:206,])
-
-lin_genes005 <- lin_genes[lin_genes %in% c(statsct_agesig005$gene, statslin_noint_sig005$gene)]
-lin_genes001 <- lin_genes[lin_genes %in% c(statsct_agesig001$gene, statslin_noint_sig001$gene)]
-
-inbyage <- function(x){
-  names(x) <- x
-  if (x %in% statscat_withint_sig$gene){ # order is important! first cat then lin, and first age dependent
-    return("age_dependent")
-  }else if (x %in% statsFull_cat_sig$gene){
-    return("ages_same")
-  }else if (x %in% statsct_agesig$gene){
-    return("age_dependent")
-  }else if(x %in% statslin_noint_sig$gene){
-    return("ages_same")
-  }else{
-    return("unclear")
-  }
-}
-
-agedep <- sapply(cat_effects_all$gene, function(x) inbyage(x))
-table(agedep) # looking good
-cat_effects_all$agedep <- agedep
-# also need colour thing
-
-colvecall <- sapply(cat_effects_all$gene, function(x) make_colvec2(x))
-table(colvecall)
-cat_effects_all$colour <- colvecall
-
-cat_eff_wide <- pivot_wider(dplyr::select(cat_effects, gene:hvb), names_from = age, values_from = c(cvb,hvb))
-cat_eff_wide[is.na(cat_eff_wide$cvb_week1),"cvb_week1"] <- 0
-cat_eff_wide[is.na(cat_eff_wide$cvb_week8),"cvb_week8"] <- 0
-cat_eff_wide[is.na(cat_eff_wide$hvb_week1),"hvb_week1"] <- 0
-cat_eff_wide[is.na(cat_eff_wide$hvb_week8),"hvb_week8"] <- 0
-# add info where expressed
-
-cat_eff_wide <- left_join(cat_eff_wide, subset(cat_effects_all, select = c(gene, colour)))
-
-## could also include no interaction with equal effects in hot and cold? But only maybe
-cat_effects_noint_ageish <- dplyr::rename(cat_effects_noint, cvb_week1 = cvb, hvb_week1 = hvb)
-cat_effects_noint_ageish$cvb_week8 <- cat_effects_noint_ageish$cvb_week1
-cat_effects_noint_ageish$hvb_week8 <- cat_effects_noint_ageish$hvb_week1
-
-# cat_eff_wide <- rbind(cat_eff_wide, subset(cat_effects_noint_ageish, !(gene %in% cat_eff_wide$gene), select = c(gene, cvb_week1,cvb_week8,hvb_week1,hvb_week8,colour)))
-
+### dot plots
 # turn signs around so it fits with the text
 cat_eff_wide$cvb_week1 <- cat_eff_wide$cvb_week1*-1
 cat_eff_wide$cvb_week8 <- cat_eff_wide$cvb_week8*-1
 cat_eff_wide$hvb_week1 <- cat_eff_wide$hvb_week1*-1
 cat_eff_wide$hvb_week8 <- cat_eff_wide$hvb_week8*-1
+
 
 ggplot(filter(cat_eff_wide, !(hvb_week1 == 0 & hvb_week8 == 0)), aes(x = hvb_week1, y = hvb_week8, colour = colour))+
   geom_jitter(height=0.02, width = 0.02, alpha = 0.6)+
@@ -773,119 +715,3 @@ length(which(cat_effects_both_all$cvb_week8 < 0 & cat_effects_both_all$cvb_week1
 # that does not add up there should be 114 in total according to below
 # ah no it's because genes that are in both hot and cold are classified as both sig if they are sig either in hot or cold!
 
-
-ggplot(cat_effects_all, aes(x = hvb, y = cvb, fill = colour))+
-  geom_point(shape = 21, alpha = 0.7)+
-  geom_hline(yintercept = 0)+geom_vline(xintercept = 0)+
-  scale_fill_manual(values = c(linear = "green3",hot=tempcols[["hot"]],hotandcold=tempcols[["benign"]],cold=tempcols[["cold"]]))+
-  scale_x_continuous(name="Gene expression in benign compared to heat", breaks = c(-1,-0.5,0,0.5,1), limits = c(-1,1.7))+
-  scale_y_continuous(name="Gene expression in benign compated to cold", breaks = c(-0.5,0,0.5,1), limits = c(-0.55,0.9))+
-  theme_minimal(base_size = 20)
-# plots with separate hot cold and both
-ggplot(filter(cat_effects_all, colour %in% "hot"), aes(x = hvb, y = cvb, fill = colour))+
-  geom_point(shape = 21, alpha = 0.7)+
-  geom_hline(yintercept = 0)+geom_vline(xintercept = 0)+
-  scale_fill_manual(values = c(linear = "green3",hot=tempcols[["hot"]],hotandcold=tempcols[["benign"]],cold=tempcols[["cold"]]))+
-  scale_x_continuous(name="Gene expression in benign compared to heat", breaks = c(-1,-0.5,0,0.5,1), limits = c(-1,1.7))+
-  scale_y_continuous(name="Gene expression in benign compated to cold", breaks = c(-0.5,0,0.5,1), limits = c(-0.55,0.9))+
-  theme_minimal(base_size = 20)
-# kind of defies the message that a lot are opposite because of all the cat heat ones
-table(filter(cat_effects_all, colour == "linear")$hvb < 0 & filter(cat_effects_all, colour == "linear")$cvb > 0) # 118 in upper left
-table(filter(cat_effects_all, colour == "linear")$hvb > 0 & filter(cat_effects_all, colour == "linear")$cvb < 0) # 62 in lower right
-table(filter(cat_effects_all, colour == "linear")$hvb > 0 & filter(cat_effects_all, colour == "linear")$cvb > 0) # 120 in upper right
-table(filter(cat_effects_all, colour == "linear")$hvb < 0 & filter(cat_effects_all, colour == "linear")$cvb < 0) # 25 in lower left
-# upper right and lower left should not exist for linear!!
-# but maybe that's because I am including genes that have different slopes depending on age which will muddle it all
-# so now same plot with only genes from the models without intercept
-ggplot(filter(cat_effects_all, gene %in% c(statslin_noint_sig$gene,statsFull_cat_sig$gene)), aes(x = hvb, y = cvb, fill = colour))+
-  geom_point(shape = 21, alpha = 0.7)+
-  geom_hline(yintercept = 0)+geom_vline(xintercept = 0)+
-  scale_fill_manual(values = c(linear = "green3",hot=tempcols[["hot"]],hotandcold=tempcols[["benign"]],cold=tempcols[["cold"]],unclear = "gray"))+
-  scale_x_continuous(name="Gene expression in benign minus heat", breaks = c(-1,-0.5,0,0.5,1), limits = c(-1,1.7))+
-  scale_y_continuous(name="Gene expression in benign minus cold", breaks = c(-0.5,0,0.5,1), limits = c(-0.55,0.9))+
-  theme_minimal(base_size = 20)
-# sadly that did not solve the problem
-# let's just look at linear ones
-ggplot(filter(cat_effects_all, colour %in% c("linear")), aes(x = hvb, y = cvb, fill = agedep))+
-  geom_point(shape = 21,alpha = 0.7)+
-  geom_hline(yintercept = 0)+geom_vline(xintercept = 0)+
-  scale_fill_manual(values = c("green2","green4"))+
-  scale_x_continuous(name="Gene expression in benign compared to heat", breaks = c(-1,-0.5,0,0.5,1), limits = c(-1,1.7))+
-  scale_y_continuous(name="Gene expression in benign compated to cold", breaks = c(-0.5,0,0.5,1), limits = c(-0.55,0.9))+
-  ggtitle("linear genes at p < 0.001")+
-  theme_minimal(base_size = 20)
-# take a look at the genes that don't behave as expected
-weirdg_effs <- filter(cat_effects_all, agedep == "ages_same" & colour == "linear" & hvb > 0 & cvb > 0)
-rownames(weirdg_effs) <- NULL
-summary(weirdg_effs) # most of them are not significant, esp not for cold
-# look at some
-summary(GeneFitsLinNoint$g3872) # negative slope although clearly up in heat according to cat_effects_all table
-summary(GeneFits_all$g3872) # here benign estimate is highest and cold close, and heat lowest -> in line with what linear models says more or less
-EMres_all$g3872 # again bgn and cold higher than hot
-EMpairs_all$g3872 # but now here benign - hot is positive! What happened? I read it wrong, of course b-h is pos when bgn is higher duuhhh
-# is the slope always negative?
-table((weirdg_effs$hvb - weirdg_effs$cvb)>0) # ok for very few of them the difference b-c is bigger than b-h, so their slope should be positive!
-weirdg_effs$hvb - weirdg_effs$cvb # eg nr 31 aka g16950
-summary(GeneFitsLinNoint$g14301) # yep positive slope, so one cannot even count on that
-summary(GeneFits_all$g14301) # hot and bgn basically the same
-EMres_all$g14301 # again bgn and cold higher than hot
-EMpairs_all$g14301 # but now here benign - hot is positive! What happened? I read it wrong, of course b-h is pos when bgn is higher duuhhh
-# for almost all of these the difference from benign is not significant (at 0.01) so maybe we should just put them to 0 to exemplify that
-cat_effects_all0 <- cat_effects_all
-cat_effects_all0[cat_effects_all0$p_hvb > 0.01, "hvb"] <- 0
-cat_effects_all0[cat_effects_all0$p_cvb > 0.01, "cvb"] <- 0
-ggplot(cat_effects_all0, aes(x = hvb, y = cvb, fill = colour))+
-  geom_jitter(shape = 21, alpha = 0.7, width = 0.03, height = 0.03)+
-  geom_hline(yintercept = 0)+geom_vline(xintercept = 0)+
-  scale_fill_manual(values = c(linear = "green3",hot=tempcols[["hot"]],hotandcold=tempcols[["benign"]],cold=tempcols[["cold"]]))+
-  scale_x_continuous(name="Gene expression in heat compared to benign", breaks = c(-1,-0.5,0,0.5,1))+
-  scale_y_continuous(name="Gene expression in cold compared to benign", breaks = c(-0.5,0,0.5,1))+
-  theme_minimal(base_size = 20)
-# isn't really helpful maybe
-linlike_effs <- filter(cat_effects_all, agedep == "ages_same" & colour == "linear" & hvb < 0 & cvb > 0)
-rownames(linlike_effs) <- NULL
-summary(linlike_effs) # they are all not significant
-# check that they have positive slope as they should
-summary(GeneFitsLinNoint$g10463)$coefficients[2,1] 
-sloopes <- sapply(GeneFitsLinNoint, function(fit) summary(fit)$coefficients[2,1])
-sloopes <- sloopes[names(sloopes) %in% linlike_effs$gene]
-summary(sloopes) # yep all positive, and also tested the opposite good all negative
-
-
-
-
-# I don't know how I was thinking above, but from this plot it's clear which of the shared cat ones are same and opposite direction
-# how many?
-table(filter(cat_effects_all, colour == "hotandcold")$hvb < 0 & filter(cat_effects_all, colour == "hotandcold")$cvb > 0) # 29 in upper left
-table(filter(cat_effects_all, colour == "hotandcold")$hvb > 0 & filter(cat_effects_all, colour == "hotandcold")$cvb < 0) # 43 in lower right
-# take these out as well for GO just for completeness sake
-catshared_hotupcolddown <- cat_effects_all[which(cat_effects_all$colour == "hotandcold" & (cat_effects_all$hvb >0 & cat_effects_all$cvb < 0)),"gene"]
-catshared_hotupcoldup <- cat_effects_all[which(cat_effects_all$colour == "hotandcold" & (cat_effects_all$hvb >0 & cat_effects_all$cvb > 0)),"gene"]
-catshared_hotdowncolddown <- cat_effects_all[which(cat_effects_all$colour == "hotandcold" & (cat_effects_all$hvb < 0 & cat_effects_all$cvb < 0)),"gene"]
-catshared_hotdowncoldup <- cat_effects_all[which(cat_effects_all$colour == "hotandcold" & (cat_effects_all$hvb <0 & cat_effects_all$cvb > 0)),"gene"]
-
-
-
-## what are hot doing in cold and vice versa?
-cat_effects_noint[is.na(cat_effects_noint$cvb),"cvb"] <- 0
-cat_effects_noint[is.na(cat_effects_noint$hvb),"hvb"] <- 0
-ggplot(cat_effects_noint, aes(x = hvb, y = cvb))+
-  geom_point(shape = 1)+
-  geom_hline(yintercept = 0)+geom_vline(xintercept = 0)+
-  scale_x_continuous(name="Gene expression in heat compared to benign", breaks = c(-1,-0.5,0,0.5,1))+
-  scale_y_continuous(name="Gene expression in cold compared to benign", breaks = c(-0.5,0,0.5,1))+
-  theme_minimal(base_size = 15)
-# some genes are in there twice that's not great
-
-
-## check how many same direction and how many up down in each age (corresponds with fold change plot?)
-# linear
-lin_eff_wide <- pivot_wider(dplyr::select(linear_effects, c(gene, age, slope)), names_from = age, values_from = slope)
-lin_eff_wide <- dplyr::rename(lin_eff_wide, week1 = "1w", week8 = "8w")
-table(lin_eff_wide$week8<0,lin_eff_wide$week1>0) # (11+56)/(11+56+8+39)*100 = 58.8 % are same direction
-lin_eff_wide[which(is.na(lin_eff_wide$week1)),"week1"] <- 0 # for the sake of plotting
-lin_eff_wide[which(is.na(lin_eff_wide$week8)),"week8"] <- 0
-ggplot(lin_eff_wide, aes(x = week1, y = week8))+
-  geom_point()+
-  theme_minimal()
-# resembles other plot in some ways! But less genes
