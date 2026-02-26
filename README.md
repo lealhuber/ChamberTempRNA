@@ -9,4 +9,9 @@ STAR was used to map the trimmed and lightly filtered reads to the ostrich refer
 To asses the influence that putative PCR duplicates have on the sucess of downstream count normalisation and the results of DGE analysis, we did everything downstream both with and without removing duplicate reads. For this purpose, sample L38 was split because it was too big.
 ### counting
 The number of reads that mapped to each gene per sample was counted using htseq-count using the default modes: union (which means that reads do not have to completely overlap with genes in order to be counted for that gene), and non-unique *none* (the read is counted as ambiguous if it aligns to overlapping genes, and as not unique if it aligns to multiple genes).
-
+### differential gene expresssion
+Reads were filtered and Globin reads removed, then they were normalised and the dispersion calculated with the glmmSeq_prep_withchicks.R script. Then, different models were run with the glmmSeq_models.R script. The differentially expressed genes from these models were extracted and further analyses with a post hoc analysis wit the glmmPostHoc.R script. In there is also the code for the figures. Some additional age group related analyses are in PH_ageefftable.R.
+### cloacal temperature analysis
+The effects of treatment, age, sex and size on cloacal temperature were analysed using chamber_exp_clean.R
+### Gene overrepresentation analysis
+Can be found in GSEA_glmmSeq_final.R, with functional annotations generated with eggnog.sh
