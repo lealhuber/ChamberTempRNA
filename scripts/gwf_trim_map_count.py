@@ -139,26 +139,5 @@ for FASTQ_PAIR in fastq_pairs:
 # counts genes with default mode union and noneunique mode none
 # format bam, not stranded, and ordered by position (not name)
 
-#################################
-### Make list of files for DESeq2
-#################################
 
-# make R style file with filenames for DESeqDataSetFromHTSeqCount function
-# same with first part of sample names (ADJUST!!!)
-# make file with just file names to copy them to local computer
-
-# Input file is not perfect yet!!!
-
-# gwf.target("FileList",
-#            cores = 1,
-#            memory='1gb',
-#            walltime='00:05:00',
-#            inputs=[f'{out_dir}/counts/L66.count_matrix.txt'],
-#            outputs=[f'{out_dir}/matrixFileNames.txt',
-#                     f'{out_dir}/SampleNames.txt',
-#                     f'{out_dir}/matrixFileNamesCopy.txt']) << """
-#     ls {out_dir}/counts/ | sed 's/.*/"&",/' > {out_dir}/matrixFileNames.txt
-#     ls {out_dir}/counts/ | sed 's/\\(L.\\)\\(.Aligned*\\)/"\\1",/' > {out_dir}/SampleNames.txt
-#     ls {out_dir}/counts/ > {out_dir}/matrixFileNamesCopy.txt
-# """.format(out_dir=out_dir) # type: ignore
 
